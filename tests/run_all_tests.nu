@@ -10,9 +10,9 @@ def main [] {
     print ""
 
     try {
-        test_models main
+        test_models
         print ""
-        test_store main
+        test_store
         print ""
         print "========================================"
         print "All tests passed successfully! ✓"

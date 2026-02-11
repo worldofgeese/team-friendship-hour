@@ -10,7 +10,7 @@ use std assert
 export def test_add_member [] {
     let state = create-initial-state | add-member "Alice"
 
-    assert ($state.members | length) == 1
+    assert (($state.members | length) == 1)
     assert ($state.members.0.name == "Alice")
     assert ($state.members.0.active == true)
 
@@ -25,7 +25,7 @@ export def test_add_multiple_members [] {
         | add-member "Bob"
         | add-member "Charlie"
 
-    assert ($state.members | length) == 3
+    assert (($state.members | length) == 3)
     assert ($state.members.0.name == "Alice")
     assert ($state.members.1.name == "Bob")
     assert ($state.members.2.name == "Charlie")
@@ -41,7 +41,7 @@ export def test_remove_member [] {
 
     let updated_state = $state | remove-member $member_id
 
-    assert ($updated_state.members | length) == 1
+    assert (($updated_state.members | length) == 1)
     assert ($updated_state.members.0.active == false)
 
     print "✓ test_remove_member passed"
@@ -60,7 +60,7 @@ export def test_get_active_members [] {
 
     let active = $state_with_removal | get-active-members
 
-    assert ($active | length) == 2
+    assert (($active | length) == 2)
     assert ($active.0.name == "Bob")
     assert ($active.1.name == "Charlie")
 
@@ -84,7 +84,7 @@ export def test_get_pending_hosts [] {
 
     let pending = $state_with_completed | get-pending-hosts
 
-    assert ($pending | length) == 2
+    assert (($pending | length) == 2)
     assert ($pending.0.name == "Bob")
     assert ($pending.1.name == "Charlie")
 
@@ -136,17 +136,21 @@ export def test_start_new_cycle [] {
 }
 
 # Test: add-activity
-# Purpose: Verify that add-activity adds activity and marks host as completed
+# Purpose: Verify that add-activity adds activity and auto-cycles when complete
 export def test_add_activity [] {
-    let state = create-initial-state | add-member "Alice"
+    let state = create-initial-state 
+        | add-member "Alice"
+        | add-member "Bob"
     let alice_id = $state.members.0.id
 
     let updated_state = $state | add-activity $alice_id "Bowling" "2026-02-15"
 
-    assert ($updated_state.activities | length) == 1
+    assert (($updated_state.activities | length) == 1)
     assert ($updated_state.activities.0.activity_name == "Bowling")
     assert ($updated_state.activities.0.host_id == $alice_id)
-    assert ($updated_state.current_cycle.completed_members | length) == 1
+    # Cycle should NOT complete yet (Bob hasn't hosted)
+    assert ($updated_state.current_cycle.cycle_number == 1)
+    assert (($updated_state.current_cycle.completed_members | length) == 1)
     assert ($updated_state.current_cycle.completed_members.0 == $alice_id)
 
     print "✓ test_add_activity passed"
@@ -172,7 +176,7 @@ export def test_add_activity_auto_cycles [] {
 
     assert ($state_after_bob.current_cycle.cycle_number == 2)
     assert ($state_after_bob.current_cycle.completed_members | is-empty)
-    assert ($state_after_bob.activities | length) == 2
+    assert (($state_after_bob.activities | length) == 2)
 
     print "✓ test_add_activity_auto_cycles passed"
 }
@@ -190,7 +194,7 @@ export def test_get_activities [] {
 
     let activities = $state_with_activities | get-activities
 
-    assert ($activities | length) == 3
+    assert (($activities | length) == 3)
     # Should be sorted newest first
     assert ($activities.0.date == "2026-03-01")
     assert ($activities.1.date == "2026-02-01")
@@ -217,7 +221,7 @@ export def test_new_member_mid_cycle [] {
     let pending = $state_with_charlie | get-pending-hosts
 
     # Bob and Charlie should be pending
-    assert ($pending | length) == 2
+    assert (($pending | length) == 2)
 
     print "✓ test_new_member_mid_cycle passed"
 }
