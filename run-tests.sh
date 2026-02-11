@@ -1,11 +1,53 @@
 #!/bin/sh
 # Run tests from the repo root
-# Nushell resolves source/use paths relative to the script's location at parse time
-# So we run nu from the directory containing the script
+# Nushell parses source/use at parse time, not runtime
+# Solution: inline the module code directly
 
 cd "$(dirname "$0")"
+
+# Inline the models module and run tests
 exec nu -c '
-source src/data/models.nu
+# ===== INLINED FROM src/data/models.nu =====
+def create-team-member [name: string]: nothing -> record {
+    {
+        id: (random uuid)
+        name: $name
+        active: true
+        added_date: (date now | format date "%Y-%m-%d")
+    }
+}
+
+def create-activity [
+    host_id: string
+    activity_name: string
+    date: string
+    cycle_number: int
+]: nothing -> record {
+    {
+        id: (random uuid)
+        host_id: $host_id
+        activity_name: $activity_name
+        date: $date
+        cycle_number: $cycle_number
+    }
+}
+
+def create-cycle [cycle_number: int]: nothing -> record {
+    {
+        cycle_number: $cycle_number
+        started_date: (date now | format date "%Y-%m-%d")
+        completed_members: []
+    }
+}
+
+def create-initial-state []: nothing -> record {
+    {
+        members: []
+        activities: []
+        current_cycle: (create-cycle 1)
+    }
+}
+# ===== END INLINED MODULE =====
 
 use std assert
 
