@@ -26,9 +26,7 @@ jobs:
       - name: Run unit tests
         run: |
           cd repo
-          export NU_LIB_DIRS="$(pwd)"
-          nu tests/test_models.nu
-          nu tests/test_store.nu
+          nu run-tests.nu
 
   build:
     name: Build Container Image
