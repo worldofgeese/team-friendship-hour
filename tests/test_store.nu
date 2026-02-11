@@ -1,8 +1,8 @@
 # Unit tests for data store
 # Following HtDF design recipe: Signature, Purpose, Examples, Template, Implementation
 
-use ../src/data/store.nu *
-use ../src/data/models.nu *
+use src/data/store.nu *
+use src/data/models.nu *
 use std assert
 
 # Test: add-member

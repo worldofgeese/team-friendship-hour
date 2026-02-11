@@ -1,7 +1,7 @@
 # Unit tests for data models
 # Following HtDD design recipe: Signature, Purpose, Examples, Template, Implementation
 
-use ../src/data/models.nu *
+use src/data/models.nu *
 use std assert
 
 # Test: create-team-member

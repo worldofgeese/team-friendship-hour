@@ -1,7 +1,9 @@
+#!/usr/bin/env nu
 # Run all tests for Team Friendship Hour
+# Run from project root with: nu -I "$(pwd)" tests/run_all_tests.nu
 
-use test_models.nu
-use test_store.nu
+use tests/test_models.nu
+use tests/test_store.nu
 
 def main [] {
     print "========================================"
@@ -22,3 +24,5 @@ def main [] {
         exit 1
     }
 }
+
+main

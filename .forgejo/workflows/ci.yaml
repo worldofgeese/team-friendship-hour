@@ -25,8 +25,9 @@ jobs:
 
       - name: Run unit tests
         run: |
-          cd repo/tests
-          nu run_all_tests.nu
+          cd repo
+          nu -I "$(pwd)" tests/test_models.nu
+          nu -I "$(pwd)" tests/test_store.nu
 
   build:
     name: Build Container Image
