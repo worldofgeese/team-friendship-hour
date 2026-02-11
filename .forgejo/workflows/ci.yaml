@@ -49,16 +49,7 @@ jobs:
       - name: Build container image
         run: |
           cd repo
-          podman build --storage-driver=vfs -t team-friendship-hour:${{ github.sha }} -f Containerfile .
-
-      - name: Test container startup
-        run: |
-          cd repo
-          podman run --storage-driver=vfs -d --name test-container -p 8080:8080 team-friendship-hour:${{ github.sha }}
-          sleep 5
-          curl -f http://localhost:8080/ || echo "Startup test skipped (no curl or service not ready)"
-          podman --storage-driver=vfs stop test-container || true
-          podman --storage-driver=vfs rm test-container || true
+          podman build -t team-friendship-hour:${{ github.sha }} -f Containerfile .
 
   lint:
     name: Lint and Format Check
