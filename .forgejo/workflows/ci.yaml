@@ -49,7 +49,7 @@ jobs:
       - name: Build container image
         run: |
           cd repo
-          podman build -t team-friendship-hour:${{ github.sha }} -f Containerfile .
+          podman build --storage-driver=vfs -t team-friendship-hour:${{ github.sha }} -f Containerfile .
 
   lint:
     name: Lint and Format Check
