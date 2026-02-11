@@ -20,12 +20,12 @@ jobs:
 
       - name: Checkout code
         run: |
-          git clone --depth 1 --branch ${{ github.ref_name }} ${{ github.server_url }}/${{ github.repository }}.git .
-          git checkout ${{ github.sha }}
+          git clone --depth 1 ${{ github.server_url }}/${{ github.repository }}.git repo
+          cd repo && git checkout ${{ github.sha }} || true
 
       - name: Run unit tests
         run: |
-          cd tests
+          cd repo/tests
           nu run_all_tests.nu
 
   build:
@@ -40,11 +40,12 @@ jobs:
 
       - name: Checkout code
         run: |
-          git clone --depth 1 --branch ${{ github.ref_name }} ${{ github.server_url }}/${{ github.repository }}.git .
-          git checkout ${{ github.sha }}
+          git clone --depth 1 ${{ github.server_url }}/${{ github.repository }}.git repo
+          cd repo && git checkout ${{ github.sha }} || true
 
       - name: Build container image
         run: |
+          cd repo
           docker build -t team-friendship-hour:${{ github.sha }} -f Containerfile .
 
       - name: Test container startup
@@ -68,11 +69,12 @@ jobs:
 
       - name: Checkout code
         run: |
-          git clone --depth 1 --branch ${{ github.ref_name }} ${{ github.server_url }}/${{ github.repository }}.git .
-          git checkout ${{ github.sha }}
+          git clone --depth 1 ${{ github.server_url }}/${{ github.repository }}.git repo
+          cd repo && git checkout ${{ github.sha }} || true
 
       - name: Check Nushell syntax
         run: |
+          cd repo
           for f in $(find src tests -name "*.nu"); do
             nu -c "open $f | ignore" || exit 1
           done
