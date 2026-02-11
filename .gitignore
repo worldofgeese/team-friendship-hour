@@ -1,0 +1,22 @@
+# Data directory - contains runtime state
+data/
+
+# Nushell history
+.nu-history
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Container volumes
+volumes/
+
+# Logs
+*.log
