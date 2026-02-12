@@ -14,6 +14,10 @@ export default $config({
     };
   },
   async run() {
+    // Resolve account + region dynamically
+    const account = aws.getCallerIdentityOutput().accountId;
+    const region = aws.getRegionOutput().name;
+
     // S3 bucket for persistent state
     const bucket = new sst.aws.Bucket("TfhState");
 
@@ -21,13 +25,13 @@ export default $config({
     const vpc = new sst.aws.Vpc("TfhVpc");
     const cluster = new sst.aws.Cluster("TfhCluster", { vpc });
 
-    // Service with Cloud Map for service discovery
+    // Pre-built image from ECR (built and pushed by deploy.sh)
+    const image = $interpolate`${account}.dkr.ecr.${region}.amazonaws.com/team-friendship-hour:latest`;
+
+    // ECS Fargate service
     const service = new sst.aws.Service("TeamFriendshipHour", {
       cluster,
-      // Pre-built image (SST can't use BuildKit with podman-in-podman)
-      // To rebuild: DOCKER_BUILDKIT=0 DOCKER_API_VERSION=1.41 docker build -f Containerfile -t 283770098737.dkr.ecr.eu-north-1.amazonaws.com/team-friendship-hour:latest .
-      // Then push: DOCKER_API_VERSION=1.41 docker push 283770098737.dkr.ecr.eu-north-1.amazonaws.com/team-friendship-hour:latest
-      image: "283770098737.dkr.ecr.eu-north-1.amazonaws.com/team-friendship-hour:latest",
+      image,
       environment: {
         S3_BUCKET: bucket.name
       },
@@ -35,10 +39,10 @@ export default $config({
       serviceRegistry: {
         port: 8080
       },
-      capacity: "spot",  // ~$6/mo instead of $12
+      capacity: "spot",  // ~$6/mo instead of ~$12
     });
 
-    // API Gateway for public access (no ALB needed, pay-per-request)
+    // API Gateway for public access (pay-per-request, no ALB needed)
     const api = new sst.aws.ApiGatewayV2("TfhApi", {
       vpc
     });

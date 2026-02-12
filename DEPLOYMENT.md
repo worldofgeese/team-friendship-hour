@@ -14,101 +14,100 @@ SST manages: VPC, ECS Cluster, Fargate Service, S3 bucket, IAM roles, API Gatewa
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) or [Bun](https://bun.sh/)
-- [Docker](https://docs.docker.com/get-docker/) (or Podman with `DOCKER_BUILDKIT=0`)
+- [Bun](https://bun.sh/) or [Node.js](https://nodejs.org/)
+- [Docker](https://docs.docker.com/get-docker/) (or Podman)
 - AWS credentials configured (`aws configure` or environment variables)
-- An [ECR repository](https://aws.amazon.com/ecr/) for container images
 
-## Setup
+## Quick Start
 
 ```bash
-# Install dependencies (includes SST)
+# Install dependencies
 bun install
 
-# Create ECR repo (first time only)
-aws ecr create-repository --repository-name team-friendship-hour --region eu-north-1
+# Deploy (builds image, pushes to ECR, deploys infrastructure)
+./deploy.sh
 ```
 
-## Deploy
+That's it. The script handles ECR repo creation, image build+push, and SST deployment. On completion it prints the live API Gateway URL.
 
-### 1. Build and push the container image
+## Scripts
 
-SST expects a pre-built image in ECR. Build and push before deploying:
+### `deploy.sh [stage] [tag]`
+
+One-command deploy. Defaults to `production` stage and `latest` tag.
 
 ```bash
-# Set your account ID and region
-export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-export AWS_REGION=eu-north-1
-export ECR_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/team-friendship-hour
+./deploy.sh                    # Deploy to production
+./deploy.sh dev                # Deploy to a dev stage
+./deploy.sh production v1.2.0  # Deploy with a specific image tag
+```
 
-# Login to ECR
-aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+What it does:
+1. Creates ECR repository (if it doesn't exist)
+2. Logs in to ECR
+3. Builds the container image
+4. Pushes to ECR
+5. Runs `sst deploy`
+
+### `teardown.sh [stage]`
+
+Removes all AWS resources created by SST and cleans up the ECR repository.
+
+```bash
+./teardown.sh              # Tear down production
+./teardown.sh dev          # Tear down dev stage
+```
+
+> **Note:** `sst remove` can take a few minutes (VPC and CloudMap cleanup). Let it finish — killing it mid-run can leave orphaned resources.
+
+## Manual Deploy
+
+If you prefer running steps individually:
+
+```bash
+# Set variables
+export AWS_DEFAULT_REGION=eu-north-1
+ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
+ECR="$ACCOUNT.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com"
+
+# ECR setup (first time only)
+aws ecr create-repository --repository-name team-friendship-hour --region $AWS_DEFAULT_REGION
 
 # Build and push
-docker build -f Containerfile -t $ECR_URI:latest .
-docker push $ECR_URI:latest
+aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR
+docker build -f Containerfile -t $ECR/team-friendship-hour:latest .
+docker push $ECR/team-friendship-hour:latest
+
+# Deploy
+npx sst deploy --stage production
 ```
 
 > **Podman users:** Prefix build with `DOCKER_BUILDKIT=0` — BuildKit doesn't work in rootless Podman.
 
-### 2. Update the image reference in `sst.config.ts`
+## Configuration
 
-The `image` field in the Service config must match your ECR URI:
+Edit `sst.config.ts` to adjust:
 
-```ts
-image: "<your-account-id>.dkr.ecr.eu-north-1.amazonaws.com/team-friendship-hour:latest",
-```
+- **`capacity`** — `"spot"` (~$6/mo) or remove for on-demand (~$12/mo)
+- **`removal`** — `"retain"` (production) keeps S3 bucket on teardown; `"remove"` (other stages) deletes everything
+- **Region** — Change in both `providers.aws.region` and `AWS_DEFAULT_REGION`
 
-### 3. Deploy with SST
-
-```bash
-# Deploy to production
-npx sst deploy --stage production
-
-# Deploy to a dev/test stage
-npx sst deploy --stage dev
-```
-
-SST outputs the API Gateway URL on completion.
-
-## Tear Down
-
-```bash
-npx sst remove --stage production
-```
-
-This removes all AWS resources created by SST (VPC, cluster, service, S3 bucket, API Gateway, IAM roles).
-
-> **Note:** `sst remove` can take several minutes due to VPC Link and CloudMap namespace deletion. Let it finish — killing it mid-run leaves orphaned resources.
-
-After removal, optionally clean up:
-```bash
-# Delete ECR repo
-aws ecr delete-repository --repository-name team-friendship-hour --force
-
-# Delete SST bootstrap (if you want a fully clean account)
-aws ssm delete-parameter --name /sst/bootstrap
-aws s3 rb s3://$(aws ssm get-parameter --name /sst/bootstrap --query 'Parameter.Value' --output text | jq -r '.state') --force
-aws s3 rb s3://$(aws ssm get-parameter --name /sst/bootstrap --query 'Parameter.Value' --output text | jq -r '.asset') --force
-```
+The account ID and ECR URI are resolved dynamically — no hardcoded values.
 
 ## Cost
 
 Fargate Spot (default): **~$6/month**
 - 0.25 vCPU, 0.5 GB RAM
-- Public IPv4 address
-- API Gateway (pay-per-request, negligible for low traffic)
+- API Gateway (pay-per-request, negligible at low traffic)
 - S3 (negligible for small state files)
 
-Fargate on-demand: ~$12/month. Change `capacity` in `sst.config.ts`.
+Fargate on-demand: ~$12/month.
 
 ## Local Development
 
 ```bash
-# Run with Docker Compose
 docker compose up --build
-
 # Access at http://localhost:8080
 ```
 
-State is stored in a named volume (`data:/app/data`) locally, or S3 when `S3_BUCKET` is set.
+State is stored in a named volume locally, or S3 when `S3_BUCKET` is set.
