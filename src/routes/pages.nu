@@ -5,7 +5,7 @@
 export def "page index" []: record -> string {
     let req = $in
 
-    let html = "
+    "
 <!DOCTYPE html>
 <html lang=\"en\">
 <head>
@@ -168,7 +168,7 @@ export def "page index" []: record -> string {
         }
         .cycle-stats {
             display: flex;
-            justify-content: space-around;
+            justify-space-around;
             margin-top: 15px;
         }
         .stat {
@@ -328,12 +328,6 @@ export def "page index" []: record -> string {
 </body>
 </html>
 "
-
-    {
-        status: 200
-        headers: {"Content-Type": "text/html; charset=utf-8"}
-        body: $html
-    } | to json
 }
 
 # Purpose: Route page requests to appropriate handlers
@@ -346,11 +340,7 @@ export def route-pages []: record -> string {
         "/" => { $req | page index }
         "/index.html" => { $req | page index }
         _ => {
-            {
-                status: 404
-                headers: {"Content-Type": "text/html"}
-                body: "<h1>404 Not Found</h1>"
-            } | to json
+            "<h1>404 Not Found</h1>" | metadata set --merge {'http.response': {status: 404}}
         }
     }
 }
