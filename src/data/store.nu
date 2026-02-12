@@ -6,9 +6,26 @@ use models.nu *
 # Constants
 const STATE_FILE = "data/state.json"
 
-# Purpose: Load application state from disk
+# Purpose: Load application state from S3 or disk (with fallback)
 # Signature: nothing -> record
 export def load-state []: nothing -> record {
+    # Check if S3 is configured
+    if ("S3_BUCKET" in $env) {
+        let bucket = $env.S3_BUCKET
+        let local_path = "/tmp/state.json"
+        
+        # Try to download from S3
+        let result = (do -i { aws s3 cp $"s3://($bucket)/state.json" $local_path --quiet } | complete)
+        
+        if $result.exit_code == 0 and ($local_path | path exists) {
+            return (open $local_path)
+        } else {
+            # S3 bucket is empty or error occurred, return initial state
+            return (create-initial-state)
+        }
+    }
+    
+    # Fallback to local file storage
     if ($STATE_FILE | path exists) {
         open $STATE_FILE
     } else {
@@ -16,11 +33,26 @@ export def load-state []: nothing -> record {
     }
 }
 
-# Purpose: Save application state to disk
+# Purpose: Save application state to S3 or disk (with fallback)
 # Signature: record -> nothing
 export def save-state []: record -> nothing {
     let state = $in
 
+    # Check if S3 is configured
+    if ("S3_BUCKET" in $env) {
+        let bucket = $env.S3_BUCKET
+        let local_path = "/tmp/state.json"
+        
+        # Save to temp file first
+        $state | to json | save -f $local_path
+        
+        # Upload to S3
+        aws s3 cp $local_path $"s3://($bucket)/state.json" --quiet
+        
+        return
+    }
+    
+    # Fallback to local file storage
     # Ensure data directory exists
     mkdir data
 

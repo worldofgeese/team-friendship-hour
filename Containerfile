@@ -19,6 +19,7 @@ RUN apk add --no-cache \
     nushell \
     curl \
     ca-certificates \
+    aws-cli \
     && rm -rf /var/cache/apk/*
 
 # Download and install pre-built http-nu binary
