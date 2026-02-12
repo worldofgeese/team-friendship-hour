@@ -137,11 +137,14 @@ docker compose down
 # Build the image
 podman build -t team-friendship-hour -f Containerfile .
 
+# Create a named volume for data persistence
+podman volume create team-friendship-hour-data
+
 # Run the container
 podman run -d \
   --name team-friendship-hour \
   -p 8080:8080 \
-  -v ./data:/app/data:Z \
+  -v team-friendship-hour-data:/app/data \
   team-friendship-hour
 
 # View logs
@@ -213,10 +216,12 @@ Cycle 2 starts with members: Alice, Bob, Charlie
 
 Application state is stored in `data/state.json` and persists across:
 - Server restarts
-- Container restarts (when using volume mounts)
+- Container restarts (when using named volumes)
 - Application updates
 
 The data file is automatically created on first run with an initial empty state.
+
+When using Docker Compose, a named volume `data` is automatically created and managed. For Podman, create a named volume using `podman volume create team-friendship-hour-data` before running the container.
 
 ## CI/CD
 

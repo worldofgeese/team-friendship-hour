@@ -7,8 +7,8 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      # Persist data across container restarts
-      - ./data:/app/data:Z
+      # Persist data across container restarts using named volume
+      - data:/app/data
     environment:
       - PORT=8080
     restart: unless-stopped

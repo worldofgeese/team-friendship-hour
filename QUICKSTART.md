@@ -39,11 +39,14 @@ Visit http://localhost:8080
 # Build the image
 podman build -t team-friendship-hour -f Containerfile .
 
+# Create a named volume for data persistence
+podman volume create team-friendship-hour-data
+
 # Run the container
 podman run -d \
   --name team-friendship-hour \
   -p 8080:8080 \
-  -v ./data:/app/data:Z \
+  -v team-friendship-hour-data:/app/data \
   team-friendship-hour
 
 # View logs
@@ -84,10 +87,11 @@ nu server.nu --port 8081
 ```
 
 **Data not persisting:**
-- Ensure the data directory has proper permissions
-- Check that the volume mount is configured correctly in compose.yaml
+- Ensure the named volume is properly configured in compose.yaml
+- Check volume status: `docker volume ls` or `podman volume ls`
+- Inspect volume: `docker volume inspect team-friendship-hour_data`
 
 **Container won't start:**
 - Check logs: `docker compose logs`
 - Verify port 8080 is available
-- Ensure data directory exists and is writable
+- Ensure named volume is accessible
