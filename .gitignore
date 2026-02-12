@@ -20,3 +20,6 @@ volumes/
 
 # Logs
 *.log
+.sst/
+node_modules/
+sst-env.d.ts
