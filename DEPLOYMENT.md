@@ -43,11 +43,10 @@ One-command deploy. Defaults to `production` stage and `latest` tag.
 ```
 
 What it does:
-1. Creates ECR repository (if it doesn't exist)
-2. Logs in to ECR
-3. Builds the container image
-4. Pushes to ECR
-5. Runs `sst deploy`
+1. Logs in to ECR
+2. Builds the container image
+3. Pushes to ECR (repo auto-created on first push)
+4. Runs `sst deploy`
 
 ### `teardown.sh [stage]`
 
@@ -70,10 +69,7 @@ export AWS_DEFAULT_REGION=eu-north-1
 ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
 ECR="$ACCOUNT.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com"
 
-# ECR setup (first time only)
-aws ecr create-repository --repository-name team-friendship-hour --region $AWS_DEFAULT_REGION
-
-# Build and push
+# Build and push (ECR repo auto-created on first push)
 aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR
 docker build -f Containerfile -t $ECR/team-friendship-hour:latest .
 docker push $ECR/team-friendship-hour:latest

@@ -19,10 +19,6 @@ echo "==> Resolving AWS account..."
 ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
 ECR="$ACCOUNT.dkr.ecr.$REGION.amazonaws.com"
 
-echo "==> Ensuring ECR repository exists..."
-aws ecr describe-repositories --repository-names "$REPO_NAME" --region "$REGION" >/dev/null 2>&1 \
-  || aws ecr create-repository --repository-name "$REPO_NAME" --region "$REGION" --query 'repository.repositoryUri' --output text
-
 echo "==> Logging in to ECR..."
 aws ecr get-login-password --region "$REGION" | docker login --username AWS --password-stdin "$ECR"
 
