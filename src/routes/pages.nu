@@ -5,7 +5,7 @@
 export def "page index" []: record -> string {
     let req = $in
 
-    let html = $"
+    let html = "
 <!DOCTYPE html>
 <html lang=\"en\">
 <head>

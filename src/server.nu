@@ -17,16 +17,9 @@ def handle-request []: record -> string {
     }
 }
 
-# Purpose: Start the http-nu server
+# Purpose: Main request handler entry point for http-nu
+# http-nu pipes each request as JSON into this script's pipeline
 # Signature: nothing -> nothing
-def main [
-    --port (-p): int = 8080  # Port to listen on
-]: nothing -> nothing {
-    print $"Starting Team Friendship Hour server on port ($port)..."
-    print $"Visit http://localhost:($port) in your browser"
-
-    # Start http-nu server
-    http-nu listen $port | each { |req|
-        $req | from json | handle-request
-    }
+def main []: nothing -> nothing {
+    $in | from json | handle-request
 }
