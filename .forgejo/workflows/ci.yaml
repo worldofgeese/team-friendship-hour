@@ -54,7 +54,7 @@ jobs:
   build:
     name: Build Container Image
     runs-on: ubuntu-latest
-    needs: test
+    needs: [test, lint]
     container:
       image: quay.io/podman/stable:latest
       options: --privileged

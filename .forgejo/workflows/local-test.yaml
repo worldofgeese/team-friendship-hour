@@ -33,3 +33,42 @@ jobs:
           cd "${PROJECT_DIR:-.}"
           podman build -t team-friendship-hour:local -f Containerfile .
         shell: bash
+
+  smoke-test:
+    runs-on: -self-hosted
+    needs: build
+    steps:
+      - name: Run smoke test
+        run: |
+          cd "${PROJECT_DIR:-.}"
+          # Start container in background
+          CONTAINER_ID=$(podman run -d -p 8080:8080 team-friendship-hour:local)
+          echo "Started container: $CONTAINER_ID"
+          
+          # Wait for container to be ready (max 30 seconds)
+          for i in {1..30}; do
+            if curl -sf http://localhost:8080 >/dev/null 2>&1; then
+              echo "Container is responding!"
+              break
+            fi
+            echo "Waiting for container... ($i/30)"
+            sleep 1
+          done
+          
+          # Verify response
+          RESPONSE=$(curl -s http://localhost:8080)
+          echo "Response: $RESPONSE"
+          
+          if [ -z "$RESPONSE" ]; then
+            echo "ERROR: No response from container"
+            podman logs $CONTAINER_ID || true
+            podman stop $CONTAINER_ID || true
+            podman rm $CONTAINER_ID || true
+            exit 1
+          fi
+          
+          # Stop and remove container
+          podman stop $CONTAINER_ID
+          podman rm $CONTAINER_ID
+          echo "Smoke test passed!"
+        shell: bash
