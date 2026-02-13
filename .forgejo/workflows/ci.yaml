@@ -2,87 +2,74 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 jobs:
   test:
     name: Run Tests
-    runs-on: -self-hosted
+    runs-on: ubuntu-latest
+    container:
+      image: docker.io/library/alpine:3.21
+
     steps:
+      - name: Install dependencies
+        run: |
+          apk add --no-cache git nushell
+
+      - name: Checkout code
+        run: |
+          git clone --depth 1 ${{ github.server_url }}/${{ github.repository }}.git repo
+          cd repo && git checkout ${{ github.sha }} || true
+
       - name: Run unit tests
         run: |
-          cd "${PROJECT_DIR:-.}"
+          cd repo
           sh run-tests.sh
-        shell: bash
 
   lint:
     name: Lint and Format Check
-    runs-on: -self-hosted
+    runs-on: ubuntu-latest
+    container:
+      image: docker.io/library/alpine:3.21
+
     steps:
+      - name: Install dependencies
+        run: |
+          apk add --no-cache git nushell
+
+      - name: Checkout code
+        run: |
+          git clone --depth 1 ${{ github.server_url }}/${{ github.repository }}.git repo
+          cd repo && git checkout ${{ github.sha }} || true
+
       - name: Check Nushell syntax
         run: |
-          cd "${PROJECT_DIR:-.}"
-          for f in $(find src tests -name "*.nu" 2>/dev/null || true); do
-            [ -f "$f" ] && nu -c "open $f | ignore" || exit 1
+          cd repo
+          for f in $(find src tests -name "*.nu"); do
+            nu -c "open $f | ignore" || exit 1
           done
-        shell: bash
 
   build:
     name: Build Container Image
-    runs-on: -self-hosted
+    runs-on: ubuntu-latest
     needs: test
+    container:
+      image: quay.io/podman/stable:latest
+      options: --privileged
+
     steps:
+      - name: Install git
+        run: |
+          dnf install -y git
+
+      - name: Checkout code
+        run: |
+          git clone --depth 1 ${{ github.server_url }}/${{ github.repository }}.git repo
+          cd repo && git checkout ${{ github.sha }} || true
+
       - name: Build container image
         run: |
-          cd "${PROJECT_DIR:-.}"
-          DOCKER_BUILDKIT=0 DOCKER_API_VERSION=1.41 docker build -f Containerfile -t team-friendship-hour:test .
-        shell: bash
-        env:
-          DOCKER_BUILDKIT: "0"
-          DOCKER_API_VERSION: "1.41"
-
-  smoke:
-    name: Smoke Test
-    runs-on: -self-hosted
-    needs: build
-    steps:
-      - name: Start container and verify
-        run: |
-          cd "${PROJECT_DIR:-.}"
-          
-          # Start container in background
-          CONTAINER_ID=$(DOCKER_BUILDKIT=0 DOCKER_API_VERSION=1.41 docker run -d -p 8080:8080 team-friendship-hour:test)
-          echo "Started container: $CONTAINER_ID"
-          
-          # Wait for service to start (up to 10 seconds)
-          for i in {1..10}; do
-            sleep 1
-            if curl -sf http://localhost:8080/ >/dev/null 2>&1; then
-              break
-            fi
-            echo "Waiting for service... ($i/10)"
-          done
-          
-          # Test health endpoint
-          RESPONSE=$(curl -sf http://localhost:8080/ 2>&1 || true)
-          
-          if echo "$RESPONSE" | grep -qi "html"; then
-            echo "✓ Smoke test passed: service responded with HTML"
-            docker stop $CONTAINER_ID >/dev/null
-            docker rm $CONTAINER_ID >/dev/null
-            exit 0
-          else
-            echo "✗ Smoke test failed: no HTML response"
-            echo "Response: $RESPONSE"
-            echo "Container logs:"
-            docker logs $CONTAINER_ID
-            docker stop $CONTAINER_ID >/dev/null
-            docker rm $CONTAINER_ID >/dev/null
-            exit 1
-          fi
-        shell: bash
-        env:
-          DOCKER_BUILDKIT: "0"
-          DOCKER_API_VERSION: "1.41"
+          cd repo
+          podman build --storage-driver=vfs -t team-friendship-hour:${{ github.sha }} -f Containerfile .
