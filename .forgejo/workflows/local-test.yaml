@@ -1,0 +1,35 @@
+name: Local Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: -self-hosted
+    steps:
+      - name: Run tests
+        run: |
+          cd "${PROJECT_DIR:-.}"
+          sh run-tests.sh
+        shell: bash
+
+  lint:
+    runs-on: -self-hosted
+    steps:
+      - name: Check Nushell syntax
+        run: |
+          cd "${PROJECT_DIR:-.}"
+          for f in $(find src tests -name "*.nu"); do
+            nu -c "open $f | ignore" || exit 1
+          done
+        shell: bash
+
+  build:
+    runs-on: -self-hosted
+    needs: [test, lint]
+    steps:
+      - name: Build container image
+        run: |
+          cd "${PROJECT_DIR:-.}"
+          podman build -t team-friendship-hour:local -f Containerfile .
+        shell: bash
